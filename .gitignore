@@ -1,0 +1,13 @@
+# Entorno virtual Python
+oqs_env/
+
+# Caché Python
+__pycache__/
+*.pyc
+
+# Claves generadas (nunca subir claves privadas ni binarias al repo)
+*.key
+*.pem
+
+# Ficheros cifrados de prueba
+*.enc

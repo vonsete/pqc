@@ -148,6 +148,31 @@ Ejemplo:
 python verify.py documento.pdf documento.pdf.sig.pem ~/.kyber/mldsa_public.pem
 ```
 
+Salida si la firma es válida:
+
+```
+Fichero    : documento.pdf  (84320 B)
+Firma      : documento.pdf.sig.pem  (4627 B)
+Clave      : /home/usuario/.kyber/mldsa_public.pem
+Algoritmo  : ML-DSA-87
+
+FIRMA VÁLIDA — el fichero es auténtico e íntegro.
+```
+
+Salida si el fichero fue modificado:
+
+```
+FIRMA INVÁLIDA — el fichero fue modificado o la clave es incorrecta.
+```
+
+Códigos de salida (útiles para scripting):
+
+| Código | Significado |
+|---|---|
+| `0` | Firma válida |
+| `1` | Error (fichero no encontrado, clave incorrecta) |
+| `2` | Firma inválida (fichero manipulado) |
+
 ---
 
 ## Cómo funciona

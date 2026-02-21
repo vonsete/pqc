@@ -116,6 +116,38 @@ python decrypt.py documento.pdf.pem ~/.kyber/mlkem_secret.pem
 
 Recupera `documento.pdf` en el mismo directorio.
 
+### Firmar un fichero
+
+```bash
+python sign.py <fichero> <clave_privada.pem>
+```
+
+Ejemplo:
+
+```bash
+python sign.py documento.pdf ~/.kyber/mldsa_secret.pem
+```
+
+Genera `documento.pdf.sig.pem` junto al fichero original:
+
+```
+-----BEGIN ML-DSA-87 SIGNATURE-----
+31bXQNnhIR1Ja/Y3DuhjkQIEZjO8rQe4/py9HYin+sQ2Mwsk...
+-----END ML-DSA-87 SIGNATURE-----
+```
+
+### Verificar una firma
+
+```bash
+python verify.py <fichero> <firma.sig.pem> <clave_publica.pem>
+```
+
+Ejemplo:
+
+```bash
+python verify.py documento.pdf documento.pdf.sig.pem ~/.kyber/mldsa_public.pem
+```
+
 ---
 
 ## Cómo funciona
@@ -178,6 +210,8 @@ pqc/
 ├── keygen.py       # Generación de claves PEM en ~/.kyber/
 ├── encrypt.py      # Cifrado de ficheros (ML-KEM + AES-256-GCM)
 ├── decrypt.py      # Descifrado de ficheros
+├── sign.py         # Firma digital de ficheros (ML-DSA)
+├── verify.py       # Verificación de firmas (ML-DSA)
 ├── pem_utils.py    # Codificación/decodificación PEM (RFC 7468)
 └── pqc_demo.py     # Demo completo de ML-KEM y ML-DSA
 ```

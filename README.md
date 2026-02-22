@@ -13,6 +13,10 @@ Todos las claves y ficheros cifrados se almacenan en formato **PEM ASCII armor**
 
 ## Changelog
 
+### v0.3
+- Nuevo módulo `keyring.py`: llavero de claves públicas de contactos (ML-KEM y ML-DSA) almacenado en `~/.kyber/keyring/`.
+- `encrypt.py` y `verify.py` aceptan ahora un nombre de contacto además de una ruta de fichero `.pem`.
+
 ### v0.2
 - Las claves privadas (ML-KEM y ML-DSA) se cifran en disco con **scrypt + AES-256-GCM** protegidas por contraseña. Si alguien accede al fichero `.pem` sin la contraseña, la clave privada es ilegible.
 - `keygen.py` solicita una contraseña con confirmación al generar las claves.
@@ -116,7 +120,7 @@ Las claves privadas se almacenan cifradas. El encabezado PEM lo indica:
 ### Cifrar un fichero
 
 ```bash
-python encrypt.py <fichero> <clave_publica.pem>
+python encrypt.py <fichero> <clave_publica.pem|nombre_contacto>
 ```
 
 Ejemplo:
@@ -182,7 +186,7 @@ Genera `documento.pdf.sig.pem` junto al fichero original:
 ### Verificar una firma
 
 ```bash
-python verify.py <fichero> <firma.sig.pem> <clave_publica.pem>
+python verify.py <fichero> <firma.sig.pem> <clave_publica.pem|nombre_contacto>
 ```
 
 Ejemplo:
@@ -215,6 +219,94 @@ Códigos de salida (útiles para scripting):
 | `0` | Firma válida |
 | `1` | Error (fichero no encontrado, clave incorrecta) |
 | `2` | Firma inválida (fichero manipulado) |
+
+### Keyring de claves públicas (v0.3)
+
+El keyring almacena las claves públicas de tus contactos en `~/.kyber/keyring/`, permitiendo usar nombres legibles (`alice`) en lugar de rutas de fichero.
+
+#### Añadir un contacto
+
+```bash
+python keyring.py add alice --kem ruta/mlkem_public.pem --dsa ruta/mldsa_public.pem
+```
+
+Salida:
+
+```
+Contacto 'alice' añadido al keyring.
+  [KEM] mlkem_public.pem   ML-KEM-1024   (1568 B)
+  [DSA] mldsa_public.pem   ML-DSA-87     (2592 B)
+```
+
+La clave `--dsa` es opcional. La `--kem` es requerida.
+
+#### Listar contactos
+
+```bash
+python keyring.py list
+```
+
+```
+Contactos en el keyring (~/.kyber/keyring/):
+
+  alice
+    KEM : ML-KEM-1024
+    DSA : ML-DSA-87
+
+  bob
+    KEM : ML-KEM-1024
+    DSA : (no disponible)
+
+2 contacto(s).
+```
+
+#### Mostrar detalles de un contacto
+
+```bash
+python keyring.py show alice
+```
+
+```
+Contacto: alice
+Directorio: /home/user/.kyber/keyring/alice/
+
+  [KEM] mlkem_public.pem   ML-KEM-1024   1568 B   permisos: 444
+  [DSA] mldsa_public.pem   ML-DSA-87     2592 B   permisos: 444
+```
+
+#### Eliminar un contacto
+
+```bash
+python keyring.py remove alice
+```
+
+```
+¿Eliminar contacto 'alice' y todas sus claves? [s/N]: s
+Contacto 'alice' eliminado del keyring.
+```
+
+#### Usar nombre de contacto en encrypt y verify
+
+```bash
+# Cifrar para alice (usando su nombre en lugar de la ruta del .pem)
+python encrypt.py documento.pdf alice
+
+# Verificar una firma de alice
+python verify.py documento.pdf documento.pdf.sig.pem alice
+```
+
+#### Estructura en disco
+
+```
+~/.kyber/keyring/          (700)
+    alice/                 (700)
+        mlkem_public.pem   (444)
+        mldsa_public.pem   (444)
+    bob/                   (700)
+        mlkem_public.pem   (444)
+```
+
+El keyring rechaza claves privadas: intentar importar un fichero con `PRIVATE` o `ENCRYPTED` en el label PEM produce un error.
 
 ---
 
@@ -295,6 +387,7 @@ Este toolkit usa las variantes de nivel 5 por defecto.
 ```
 pqc/
 ├── keygen.py       # Generación de claves PEM en ~/.kyber/
+├── keyring.py      # Llavero de claves públicas de contactos
 ├── encrypt.py      # Cifrado de ficheros (ML-KEM + AES-256-GCM)
 ├── decrypt.py      # Descifrado de ficheros
 ├── sign.py         # Firma digital de ficheros (ML-DSA)

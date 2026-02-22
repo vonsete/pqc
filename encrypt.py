@@ -83,7 +83,14 @@ def cifrar_fichero(ruta_fichero: str, ruta_clave_pub: str):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Uso: python encrypt.py <fichero> <clave_publica.pem>")
+        print("Uso: python encrypt.py <fichero> <clave_publica.pem|nombre_contacto>")
         sys.exit(1)
 
-    cifrar_fichero(sys.argv[1], sys.argv[2])
+    from keyring import resolve_kem_key, KeyringError
+    try:
+        ruta_clave = resolve_kem_key(sys.argv[2])
+    except KeyringError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    cifrar_fichero(sys.argv[1], str(ruta_clave))

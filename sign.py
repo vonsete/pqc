@@ -10,10 +10,11 @@ Ejemplo:
 Genera: <fichero>.sig.pem  (firma en formato ASCII armor)
 """
 
+import getpass
 import sys
 import oqs
 from pathlib import Path
-from pem_utils import load_pem_file, encode_pem
+from pem_utils import load_pem_file, encode_pem, decrypt_private_key
 
 
 def firmar_fichero(ruta_fichero: str, ruta_clave_priv: str):
@@ -28,13 +29,23 @@ def firmar_fichero(ruta_fichero: str, ruta_clave_priv: str):
         print(f"Error: clave privada no encontrada: {clave_priv_path}")
         sys.exit(1)
 
-    # 1. Leer clave privada desde PEM
-    label, secret_key = load_pem_file(clave_priv_path)
+    # 1. Leer clave privada desde PEM (cifrada o en claro)
+    label, key_payload = load_pem_file(clave_priv_path)
     if "ML-DSA" not in label:
         print(f"Error: se esperaba una clave ML-DSA, encontrado: {label}")
         sys.exit(1)
 
-    variante = label.split()[0]  # "ML-DSA-87 PRIVATE KEY" → "ML-DSA-87"
+    variante = label.split()[0]  # "ML-DSA-87 ENCRYPTED PRIVATE KEY" → "ML-DSA-87"
+
+    if "ENCRYPTED" in label:
+        password = getpass.getpass("Contraseña de la clave privada: ")
+        try:
+            secret_key = decrypt_private_key(key_payload, password)
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    else:
+        secret_key = key_payload
 
     # 2. Firmar el contenido del fichero
     datos = fichero.read_bytes()

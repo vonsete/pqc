@@ -11,6 +11,21 @@ Todos las claves y ficheros cifrados se almacenan en formato **PEM ASCII armor**
 
 ---
 
+## Changelog
+
+### v0.2
+- Las claves privadas (ML-KEM y ML-DSA) se cifran en disco con **scrypt + AES-256-GCM** protegidas por contraseña. Si alguien accede al fichero `.pem` sin la contraseña, la clave privada es ilegible.
+- `keygen.py` solicita una contraseña con confirmación al generar las claves.
+- `decrypt.py` y `sign.py` detectan automáticamente si la clave privada está cifrada y solicitan la contraseña antes de operar.
+- Compatible con claves generadas en v0.1 (sin cifrado).
+
+### v0.1
+- Generación de claves ML-KEM-1024 y ML-DSA-87 en formato PEM.
+- Cifrado y descifrado de ficheros con ML-KEM + AES-256-GCM.
+- Firma y verificación de ficheros con ML-DSA-87.
+
+---
+
 ## Requisitos
 
 - Python 3.10+
@@ -71,16 +86,32 @@ Genera el par de claves ML-KEM-1024 y ML-DSA-87 en `~/.kyber/`:
 python keygen.py
 ```
 
+Se pedirá una contraseña para proteger las claves privadas:
+
+```
+Contraseña para proteger las claves privadas:
+Confirmar contraseña:
+Derivando clave desde contraseña (scrypt N=131072)… esto puede tardar unos segundos.
+```
+
 Ficheros generados:
 
 | Fichero | Permisos | Uso |
 |---|---|---|
 | `~/.kyber/mlkem_public.pem` | `444` | Compartir para recibir ficheros cifrados |
-| `~/.kyber/mlkem_secret.pem` | `400` | Descifrar ficheros recibidos |
+| `~/.kyber/mlkem_secret.pem` | `400` | Clave privada cifrada con contraseña |
 | `~/.kyber/mldsa_public.pem` | `444` | Compartir para verificar tus firmas |
-| `~/.kyber/mldsa_secret.pem` | `400` | Firmar documentos |
+| `~/.kyber/mldsa_secret.pem` | `400` | Clave privada cifrada con contraseña |
 
 El directorio `~/.kyber/` se crea con permisos `700` (solo accesible por el usuario).
+
+Las claves privadas se almacenan cifradas. El encabezado PEM lo indica:
+
+```
+-----BEGIN ML-KEM-1024 ENCRYPTED PRIVATE KEY-----
+...
+-----END ML-KEM-1024 ENCRYPTED PRIVATE KEY-----
+```
 
 ### Cifrar un fichero
 
@@ -114,6 +145,12 @@ Ejemplo:
 python decrypt.py documento.pdf.pem ~/.kyber/mlkem_secret.pem
 ```
 
+Si la clave privada está cifrada (v0.2+), se pedirá la contraseña antes de descifrar:
+
+```
+Contraseña de la clave privada:
+```
+
 Recupera `documento.pdf` en el mismo directorio.
 
 ### Firmar un fichero
@@ -126,6 +163,12 @@ Ejemplo:
 
 ```bash
 python sign.py documento.pdf ~/.kyber/mldsa_secret.pem
+```
+
+Si la clave privada está cifrada (v0.2+), se pedirá la contraseña antes de firmar:
+
+```
+Contraseña de la clave privada:
 ```
 
 Genera `documento.pdf.sig.pem` junto al fichero original:
@@ -212,6 +255,25 @@ El formato del payload interno (codificado en Base64/PEM):
 │ N B    datos cifrados + tag GCM (16 B)       │
 └──────────────────────────────────────────────┘
 ```
+
+### Cifrado de claves privadas (v0.2)
+
+Las claves privadas nunca se guardan en claro. Al generarlas, se cifran con la contraseña del usuario usando:
+
+- **KDF:** scrypt (N=131072, r=8, p=1) — requiere ~128 MB de RAM por intento, resistente a fuerza bruta por hardware especializado
+- **Cifrado:** AES-256-GCM — autenticado, detecta cualquier manipulación del fichero
+
+Estructura del payload dentro del PEM cifrado:
+
+```
+┌─────────────────────────────────────────────┐
+│ 16 B   salt aleatoria (entrada a scrypt)    │
+│ 12 B   nonce AES-GCM                        │
+│ N B    clave privada cifrada + tag GCM      │
+└─────────────────────────────────────────────┘
+```
+
+Una contraseña incorrecta produce un error de autenticación GCM antes de devolver ningún dato.
 
 ### Niveles de seguridad disponibles
 

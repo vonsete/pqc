@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract changelog for this version
+        id: changelog
+        shell: python
+        run: |
+          import re, os, sys
+
+          tag = os.environ["GITHUB_REF_NAME"]          # e.g. "v0.3"
+          version = tag.lstrip("v")                    # e.g. "0.3"
+
+          text = open("README.md").read()
+
+          # Match the section for this version up to the next ### heading
+          pattern = rf"### v{re.escape(version)}\n(.*?)(?=\n### |\Z)"
+          m = re.search(pattern, text, re.DOTALL)
+          notes = m.group(1).strip() if m else "_Sin notas de changelog._"
+
+          # Write to $GITHUB_OUTPUT (multiline)
+          delimiter = "EOF_NOTES"
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"notes<<{delimiter}\n{notes}\n{delimiter}\n")
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false

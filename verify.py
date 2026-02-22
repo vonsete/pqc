@@ -60,7 +60,14 @@ def verificar_firma(ruta_fichero: str, ruta_firma: str, ruta_clave_pub: str):
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("Uso: python verify.py <fichero> <firma.sig.pem> <clave_publica.pem>")
+        print("Uso: python verify.py <fichero> <firma.sig.pem> <clave_publica.pem|nombre_contacto>")
         sys.exit(1)
 
-    verificar_firma(sys.argv[1], sys.argv[2], sys.argv[3])
+    from keyring import resolve_dsa_key, KeyringError
+    try:
+        ruta_clave = resolve_dsa_key(sys.argv[3])
+    except KeyringError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    verificar_firma(sys.argv[1], sys.argv[2], str(ruta_clave))

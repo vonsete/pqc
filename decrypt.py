@@ -10,12 +10,13 @@ Ejemplo:
 Genera: <fichero> (sin la extensión .pem)
 """
 
+import getpass
 import sys
 import struct
 import oqs
 from pathlib import Path
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from pem_utils import load_pem_file
+from pem_utils import load_pem_file, decrypt_private_key
 
 
 def descifrar_fichero(ruta_cifrada: str, ruta_clave_priv: str):
@@ -30,13 +31,23 @@ def descifrar_fichero(ruta_cifrada: str, ruta_clave_priv: str):
         print(f"Error: clave privada no encontrada: {clave_priv_path}")
         sys.exit(1)
 
-    # 1. Leer clave privada desde PEM
-    label_key, secret_key = load_pem_file(clave_priv_path)
+    # 1. Leer clave privada desde PEM (cifrada o en claro)
+    label_key, key_payload = load_pem_file(clave_priv_path)
     if "ML-KEM" not in label_key:
         print(f"Error: se esperaba una clave ML-KEM, encontrado: {label_key}")
         sys.exit(1)
 
-    variante = label_key.split()[0]  # "ML-KEM-1024 PRIVATE KEY" → "ML-KEM-1024"
+    variante = label_key.split()[0]  # "ML-KEM-1024 ENCRYPTED PRIVATE KEY" → "ML-KEM-1024"
+
+    if "ENCRYPTED" in label_key:
+        password = getpass.getpass("Contraseña de la clave privada: ")
+        try:
+            secret_key = decrypt_private_key(key_payload, password)
+        except ValueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    else:
+        secret_key = key_payload
 
     # 2. Leer y decodificar el fichero cifrado desde PEM
     label_enc, payload = load_pem_file(fichero_enc)
